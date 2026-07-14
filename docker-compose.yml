@@ -1,0 +1,67 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: helpdesk-app
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_URL: "${APP_URL:-http://localhost:8000}"
+      APP_SEED: "${APP_SEED:-false}"
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: "${DB_DATABASE:-helpdesk}"
+      DB_USERNAME: "${DB_USERNAME:-helpdesk}"
+      DB_PASSWORD: "${DB_PASSWORD:-secret}"
+    volumes:
+      - .:/var/www/html
+      - helpdesk_vendor:/var/www/html/vendor
+      - helpdesk_node_modules:/var/www/html/node_modules
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - helpdesk
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "php", "-r", "file_get_contents('http://127.0.0.1:8000/up') !== false || exit(1);"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+
+  mysql:
+    image: mysql:8.4
+    container_name: helpdesk-mysql
+    ports:
+      - "${FORWARD_DB_PORT:-3306}:3306"
+    environment:
+      MYSQL_DATABASE: "${DB_DATABASE:-helpdesk}"
+      MYSQL_USER: "${DB_USERNAME:-helpdesk}"
+      MYSQL_PASSWORD: "${DB_PASSWORD:-secret}"
+      MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD:-rootsecret}"
+    volumes:
+      - helpdesk_mysql_data:/var/lib/mysql
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-prootsecret"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+    networks:
+      - helpdesk
+    restart: unless-stopped
+
+networks:
+  helpdesk:
+    driver: bridge
+
+volumes:
+  helpdesk_mysql_data:
+  helpdesk_vendor:
+  helpdesk_node_modules:

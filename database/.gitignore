@@ -1,0 +1,2 @@
+# Ignore local ephemeral database artifacts.
+# Application data lives in MySQL.
