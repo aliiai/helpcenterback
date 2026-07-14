@@ -6,80 +6,42 @@
 ├──────────────────────────┬─────────────────────────────────────────────────┤
 │ Section                  │ Description                                     │
 ├──────────────────────────┼─────────────────────────────────────────────────┤
-│ Overview                 │ Full-stack product overview and key features    │
+│ Overview                 │ Platform overview and key features              │
 ├──────────────────────────┼─────────────────────────────────────────────────┤
-│ Repository Layout        │ Backend + frontend folder map                   │
+│ Local Setup              │ Requirements and steps to run it locally        │
 ├──────────────────────────┼─────────────────────────────────────────────────┤
-│ Local Setup              │ Run MySQL API and React SPA together            │
+│ API Structure            │ Request flow, modules, and endpoints            │
 ├──────────────────────────┼─────────────────────────────────────────────────┤
-│ Backend · API            │ Endpoints, auth flow, and business rules        │
+│ Design Decisions         │ Architecture and key technical choices          │
 ├──────────────────────────┼─────────────────────────────────────────────────┤
-│ Frontend · SPA           │ Routes, modules, and API consumption            │
-├──────────────────────────┼─────────────────────────────────────────────────┤
-│ Design Decisions         │ Architecture choices across both layers         │
-├──────────────────────────┼─────────────────────────────────────────────────┤
-│ Libraries & Technologies │ Stack by layer                                  │
-├──────────────────────────┼─────────────────────────────────────────────────┤
-│ Submission               │ Public GitHub checklist                         │
+│ Libraries & Technologies │ Tools and packages used per layer               │
 └──────────────────────────┴─────────────────────────────────────────────────┘
 ```
 ================================================================================
 
-# Mini Helpdesk · كلير ديسك (ClearDesk)
+# Mini Helpdesk
 
-> A full-stack support ticketing system: **Laravel API** + **React SPA**.  
-> Standard users open and follow tickets; admins manage the full queue.
+> A simplified support ticketing backend where standard users open tickets and admins manage the full queue.
 
-| Layer | Stack |
-| --- | --- |
-| **Backend** | Laravel 13 · PHP 8.3 · MySQL 8+ · Sanctum Bearer tokens |
-| **Frontend** | React 19 · TypeScript · Vite · Tailwind · Arabic RTL |
+Built on **Laravel 13 / PHP 8.3** with **Laravel Sanctum** for token-based REST authentication. Users create tickets and reply on their own threads; admins can view, reply to, and update the status of every ticket.
 
-================================================================================
 
 ## Key Features
 
-### Backend
-- **Role-based API** — `user` and `admin` with Policies and Form Requests.
-- **Tickets & replies** — ownership rules, status workflow (`open` → `in_progress` → `closed`).
-- **Image attachments** — up to 5 images per ticket/reply (`multipart/form-data`).
-- **Notifications** — last-5 bell feed + unread count (tickets + new registrations).
-- **Admin user CRUD** — list / create / update / delete.
-- **Pagination + status filter** on ticket index.
-- **Docker Compose** — app + MySQL with a senior-style entrypoint.
-- **Feature tests** — ticket creation, images, users, notifications.
-
-### Frontend
-- **Auth screens** — login / register with Sanctum token persistence.
-- **Global session** — `AuthContext` restores the user via `GET /api/user`.
-- **Role-aware routing** — users → `/dashboard`; admins → `/admin`.
-- **User dashboard** — filters, create ticket, threaded chat + images.
-- **Admin console** — inbox, status updates, user management.
-- **Loading & error UX** — empty/error states, Laravel 422 field errors, retries.
-
-================================================================================
-
-## Repository Layout
-
-```text
-help-center/                 ← monorepo root (public GitHub)
-├── app/ … routes/ …         ← Laravel API (this folder is the backend root)
-├── docker-compose.yml
-├── api-endpoints.json       ← Postman/Apidog collection
-├── README.md                ← you are here (backend + frontend)
-└── frontend/                ← React + Vite SPA
-    ├── package.json
-    ├── src/
-    └── .env.example
-```
-
-> If you have not copied the SPA yet, place the React project under [`frontend/`](frontend/) before following the frontend steps below.
+- **Role-based access** with `user` and `admin` roles on the same users table.
+- **Tickets** with title, description, and status (`open`, `in_progress`, `closed`).
+- **Threaded replies** from either the ticket owner or an admin.
+- **Image attachments** on tickets and replies (up to 5 images each, stored on the public disk).
+- **Token-based REST API** secured with Sanctum personal access tokens.
+- **Pagination & status filtering** on the ticket list.
+- **Docker Compose** for a one-command local environment (app + MySQL).
+- **Feature tests** covering ticket creation (auth, validation, and role rules).
 
 ================================================================================
 
 ## Local Setup
 
-Run the API first, then the SPA. Both are required for a working product.
+Get a local instance running in a few steps. The flow below shows the order; each step is detailed in its own card underneath.
 
 ### Requirements
 
@@ -89,23 +51,29 @@ Run the API first, then the SPA. Both are required for a working product.
 ╠══════════════════════════════════════════════════════════╣
 ║ • PHP 8.3                   • Composer                   ║
 ║ • MySQL 8+                  • Docker (optional)          ║
-║ • Node.js 20+ (LTS)         • npm 10+                    ║
 ╚══════════════════════════════════════════════════════════╝
 ```
 
 ### Setup Flow
 
 ```text
-┌────────────┐   ┌─────────────┐   ┌────────────┐   ┌─────────────┐
-│ Clone Repo │──►│ Backend API │──►│  Migrate   │──►│ Frontend SPA│
-└────────────┘   │ composer +  │   │  + seed    │   │ npm + Vite  │
-                 │ .env + MySQL│   │  + serve   │   └─────────────┘
-                 └─────────────┘   └────────────┘
+┌────────────┐   ┌──────────────┐   ┌───────────────┐   ┌────────────┐
+│ Clone Repo │──►│ Install Deps │──►│ Configure Env │──►│  Database  │──┐
+└────────────┘   └──────────────┘   └───────────────┘   └────────────┘  │
+┌────────────┐   ┌──────────┐                                           │
+│ Run Server │◄──│ Migrations│◄─────────────────────────────────────────┘
+└────────────┘   └──────────┘
 ```
 
----
+### 📦 Step 1 · Clone & Install
 
-### Backend · Step 1 · Install
+```text
+┌──────────────────────────────────────────────────────────┐
+│  Step 1 · Clone & Install                                │
+└──────────────────────────────────────────────────────────┘
+```
+
+Clone the repository and install the PHP dependencies with Composer.
 
 ```bash
 git clone <repository-url> help-center
@@ -113,14 +81,22 @@ cd help-center
 composer install
 ```
 
-### Backend · Step 2 · Environment
+### ⚙️ Step 2 · Configure Environment
+
+```text
+┌──────────────────────────────────────────────────────────┐
+│  Step 2 · Configure Environment                          │
+└──────────────────────────────────────────────────────────┘
+```
+
+Copy `.env.example` to `.env`, generate the app key, then set your **MySQL** credentials (`DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`).
 
 ```bash
 cp .env.example .env
 php artisan key:generate
 ```
 
-Default MySQL settings in `.env.example` (match Docker Compose):
+Default credentials in `.env.example` (match Docker Compose):
 
 | Setting | Value |
 |---------|-------|
@@ -131,17 +107,15 @@ Default MySQL settings in `.env.example` (match Docker Compose):
 | `DB_USERNAME` | `helpdesk` |
 | `DB_PASSWORD` | `secret` |
 
-Also set:
+### 🗄 Step 3 · Database & Migrations
 
-```env
-APP_URL=http://127.0.0.1:8000
+```text
+┌──────────────────────────────────────────────────────────┐
+│  Step 3 · Database & Migrations                          │
+└──────────────────────────────────────────────────────────┘
 ```
 
-so attachment URLs resolve correctly for the SPA.
-
-### Backend · Step 3 · Database
-
-Create the MySQL database, then migrate, seed, and link storage:
+Create a MySQL database named `helpdesk`, then run migrations and seed demo data. Create the storage symlink so uploaded images are publicly reachable.
 
 ```bash
 mysql -u root -e "CREATE DATABASE IF NOT EXISTS helpdesk CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci; CREATE USER IF NOT EXISTS 'helpdesk'@'%' IDENTIFIED BY 'secret'; GRANT ALL ON helpdesk.* TO 'helpdesk'@'%'; FLUSH PRIVILEGES;"
@@ -149,13 +123,7 @@ php artisan migrate --seed
 php artisan storage:link
 ```
 
-> If you already have MySQL credentials, skip the SQL create step and only adjust `.env`.
-
-Re-run Arabic demo data only:
-
-```bash
-php artisan db:seed --class=ArabicHelpdeskSeeder
-```
+> If you already have a local MySQL user, you can skip the SQL create step and only adjust `.env` to match your credentials.
 
 ### Seeded accounts
 
@@ -165,246 +133,212 @@ php artisan db:seed --class=ArabicHelpdeskSeeder
 | User  | ali@gmail.com     | password |
 | Users | user1@example.com … user10@example.com | password |
 
-### Backend · Step 4 · Serve the API
+تشغيل البيانات التجريبية العربية فقط:
+
+```bash
+php artisan db:seed --class=ArabicHelpdeskSeeder
+```
+
+### 🚀 Step 4 · Run the Server
+
+```text
+┌──────────────────────────────────────────────────────────┐
+│  Step 4 · Run the Server                                 │
+└──────────────────────────────────────────────────────────┘
+```
+
+Start the local development server; the API is served at `http://127.0.0.1:8000`.
 
 ```bash
 php artisan serve
 ```
 
-- API: `http://127.0.0.1:8000`
-- Health: `http://127.0.0.1:8000/up`
+### 🐳 Alternative · Docker Compose
 
-Import [api-endpoints.json](api-endpoints.json) into Postman/Apidog if you want to explore the API manually.
+```text
+┌──────────────────────────────────────────────────────────┐
+│  Alternative · Docker Compose                            │
+└──────────────────────────────────────────────────────────┘
+```
 
-### Backend · Alternative · Docker Compose
+The Docker stack runs the API and MySQL with a dedicated entrypoint that:
 
-Entrypoint waits for MySQL, creates `.env` if missing, generates `APP_KEY` only when empty, migrates, then serves. **Seed is optional.**
+1. waits for MySQL to be healthy  
+2. creates `.env` if missing  
+3. generates `APP_KEY` **only when empty**  
+4. installs Composer deps if needed  
+5. links storage and runs migrations  
+6. starts the HTTP server  
+
+**Seed is optional** and does not run on every restart.
+
+#### First-time setup (with demo data)
 
 ```bash
-# First time with demo data
 APP_SEED=true docker compose up --build -d
+```
 
-# Later starts (no re-seed)
+#### Regular start (no re-seed)
+
+```bash
 docker compose up -d
+```
 
+#### Useful commands
+
+```bash
+# Follow app logs
 docker compose logs -f app
+
+# Run artisan inside the container
+docker compose exec app php artisan route:list
+
+# Seed manually later
 docker compose exec app php artisan db:seed --force
+
+# Run tests against the MySQL testing database
+docker compose exec app php artisan test --compact
+
+# Stop everything
 docker compose down
 ```
 
 - API: `http://localhost:8000`
-- MySQL: `localhost:3306` (`helpdesk` / `helpdesk` / `secret`)
+- MySQL: `localhost:3306`  
+  database/user/password: `helpdesk` / `helpdesk` / `secret` (override via `.env`)
 
-### Backend · Tests
+> Tip: bind-mounts keep your code in sync, while `vendor` lives in a named Docker volume so host/container dependency trees do not fight each other.
 
-PHPUnit uses MySQL database `helpdesk_testing` (see [`phpunit.xml`](phpunit.xml)).
+### 🧪 Step 5 · Run Tests
+
+```text
+┌──────────────────────────────────────────────────────────┐
+│  Step 5 · Run Tests                                      │
+└──────────────────────────────────────────────────────────┘
+```
+
+Run the feature tests (or the full suite) to verify the installation. PHPUnit uses a separate MySQL database: `helpdesk_testing` (see `phpunit.xml` for credentials).
 
 ```bash
+# Create the testing database (adjust credentials to match your MySQL root/user)
+php -r "new PDO('mysql:host=127.0.0.1', 'root', '')->exec('CREATE DATABASE IF NOT EXISTS helpdesk_testing CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci');"
+
 php artisan test --compact --filter=TicketCreationTest
 php artisan test --compact
 ```
 
----
+If your MySQL user/password differ, update the `DB_*` values inside [`phpunit.xml`](phpunit.xml).
 
-### Frontend · Step 5 · Install
-
-```bash
-cd frontend
-npm install
-```
-
-### Frontend · Step 6 · Environment
-
-```bash
-cp .env.example .env
-```
-
-| Variable | Default | Purpose |
-| --- | --- | --- |
-| `VITE_API_URL` | `/api` | API base. Relative `/api` uses the Vite proxy to Laravel. |
-| `VITE_BACKEND_URL` | `http://127.0.0.1:8000` | Laravel origin for `/storage` image URLs. |
-
-Optional (call Laravel directly, no proxy):
-
-```env
-VITE_API_URL=http://127.0.0.1:8000/api
-VITE_BACKEND_URL=http://127.0.0.1:8000
-```
-
-### Frontend · Step 7 · Run the SPA
-
-Keep `php artisan serve` running, then:
-
-```bash
-cd frontend
-npm run dev
-```
-
-| Surface | URL |
-| --- | --- |
-| SPA | `http://localhost:5173` |
-| Proxied API | `http://localhost:5173/api` → `http://127.0.0.1:8000/api` |
-| Proxied storage | `http://localhost:5173/storage` → `http://127.0.0.1:8000/storage` |
-
-### Frontend · Production build (optional)
-
-```bash
-cd frontend
-npm run build
-npm run preview
-```
-
-Set `VITE_API_URL` and `VITE_BACKEND_URL` to real origins before building.
+> **Getting started with the API:** All routes live under `/api`. Call `POST /api/register` or `POST /api/login` to obtain a token, then send it as `Authorization: Bearer <token>`. Import [api-endpoints.json](api-endpoints.json) into Postman/Apidog to try every endpoint.
 
 ================================================================================
 
-## Backend · API Structure
+## API Structure
 
-All routes live under `/api`. Public: `register` + `login`. Everything else requires `Authorization: Bearer <token>`.
+All routes start with the `/api` prefix. There are only two public routes (register and login); everything else is protected by Sanctum. After authentication, Policies enforce ownership and admin privileges before the request reaches the controllers. The diagram below shows the request flow from top to bottom.
 
 ### Request Flow
 
 ```text
                   ┌───────────────────────────┐
-                  │   React SPA / API Client  │
+                  │        API Client         │
                   └─────────────┬─────────────┘
-                                │  JSON · multipart · Bearer
+                                │  HTTPS · JSON · Bearer Token
                                 ▼
                   ┌───────────────────────────┐
                   │       Prefix: /api        │
                   └─────────────┬─────────────┘
-                                ├──── PUBLIC: /register · /login
+                                │
+                                ├───────────────►  PUBLIC  (no auth)
+                                │                    • POST /register
+                                │                    • POST /login
                                 ▼
                   ┌───────────────────────────┐
+                  │   Middleware Guard        │
                   │   auth:sanctum            │
                   └─────────────┬─────────────┘
                                 ▼
                   ┌───────────────────────────┐
-                  │   Policies + Form Requests│
+                  │   Policies                │
+                  │   TicketPolicy            │
+                  │   (owner / admin rules)   │
+                  │   404 on unauthorized     │
+                  │   ticket access           │
                   └─────────────┬─────────────┘
                                 ▼
-                  auth · users · tickets · replies · notifications
+                  ┌───────────────────────────┐
+                  │   Application Modules     │
+                  └─────────────┬─────────────┘
+                                ▼
+ ┌──────────────────────────────────────────────────────────────────┐
+ │  auth (logout · user)                                            │
+ │  tickets (list · create · show · update status)                  │
+ │  replies (store on ticket)                                       │
+ └──────────────────────────────────────────────────────────────────┘
 ```
 
 ### Modules & Endpoints
 
 | Module | Key Endpoints | Description |
 | --- | --- | --- |
-| **Auth** | `POST /register` · `POST /login` · `GET /user` · `POST /logout` | Register, login, session, logout |
-| **users** | `GET/POST /users` · `GET/PATCH/DELETE /users/{id}` | Admin-only user management |
-| **notifications** | `GET /notifications` · `POST …/read-all` · `POST …/{id}/read` | Last 5 + unread count (bell) |
-| **tickets** | `GET/POST /tickets` · `GET/PATCH /tickets/{id}` | List, create, show, update status |
-| **replies** | `POST /tickets/{id}/replies` | Add reply (+ optional images) |
+| **Auth** | `POST /register` · `POST /login` · `GET /user` · `POST /logout` | Register a standard user, log in, and manage the token |
+| **users** | `GET/POST /users` · `GET/PATCH/DELETE /users/{id}` | Admin-only user management (list, create, update, delete) |
+| **notifications** | `GET /notifications` · `POST /notifications/read-all` · `POST /notifications/{id}/read` | Last 5 notifications + unread count for the bell icon |
+| **tickets** | `GET/POST /tickets` · `GET/PATCH /tickets/{id}` | List (paginated + `?status=`), create (optional images), show, update status |
+| **replies** | `POST /tickets/{id}/replies` | Add a reply (optional images) |
 
-### Image uploads (API)
+### Image Uploads
 
-- Use `multipart/form-data` with field `images[]` (max 5).
-- Types: `jpg`, `jpeg`, `png`, `webp`, `gif` — max **5MB** each.
-- Responses include `attachments[]` with `url` (requires `php artisan storage:link`).
+- Create ticket / add reply with images using `multipart/form-data` (not JSON).
+- Field name: `images[]` (array), optional, max **5** files.
+- Allowed types: `jpg`, `jpeg`, `png`, `webp`, `gif` — max **5MB** each.
+- Responses include an `attachments` array with `id`, `url`, `original_name`, `mime_type`, `size`.
+- Ensure `php artisan storage:link` has been run so `url` is reachable.
 
-### Business rules
+### Request Flow Explained
 
-- Users create tickets and only view/reply on their own.
-- Admins view/reply on all tickets and update status.
+1. **API Client:** The client sends the request in JSON (or `multipart/form-data` when uploading images), attaching the auth token in the `Authorization: Bearer <token>` header (except for register and login).
+2. **Prefix `/api`:** The unified entry point for all API routes.
+3. **PUBLIC (no auth):** Only two routes are publicly available: `POST /register` to create a standard user, and `POST /login` to obtain a token.
+4. **Middleware Guard:** All other routes pass through `auth:sanctum` (token verification).
+5. **Policies:** After authentication, `TicketPolicy` decides whether the user may create, view, reply, or update a ticket. Unauthorized viewing of another user's ticket returns `404`.
+6. **Application Modules:** After clearing the previous layers, the request reaches auth, tickets, or replies.
+
+### Business Rules
+
+- Standard users can create tickets and only view/reply to their own tickets.
+- Admins can view and reply to all tickets and update ticket status.
 - Admins cannot create tickets.
-- Unauthorized ticket access returns **404** (not 403) where applicable.
 
-Full routes: [`routes/api.php`](routes/api.php).
+### Example Login
 
-================================================================================
-
-## Frontend · SPA Structure
-
-### Request Flow
-
-```text
-                  ┌───────────────────────────┐
-                  │   Browser · Vite :5173    │
-                  └─────────────┬─────────────┘
-                                │  Bearer token
-                                ▼
-                  ┌───────────────────────────┐
-                  │   Vite proxy (dev)        │
-                  │   /api · /storage → :8000 │
-                  └─────────────┬─────────────┘
-                                ▼
-                  ┌───────────────────────────┐
-                  │   Laravel REST API        │
-                  └───────────────────────────┘
+```bash
+curl -X POST http://127.0.0.1:8000/api/login \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -d "{\"email\":\"user@example.com\",\"password\":\"password\"}"
 ```
 
-### Modules
-
-```text
-frontend/src/
-├── api/           # HTTP client, auth, tickets, users, media helpers
-├── components/    # Shared UI (modals, lists, feedback, image picker)
-├── context/       # AuthProvider — session + login/register/logout
-├── pages/         # Route screens (landing, auth, user, admin)
-├── types/         # Shared TypeScript models
-├── App.tsx        # Route tree + auth guards
-└── index.css      # Design tokens + Tailwind
-```
-
-### Routes
-
-| Path | Access | Description |
-| --- | --- | --- |
-| `/` | Guest | Marketing landing |
-| `/auth` | Guest | Login / register |
-| `/dashboard` | User | Ticket list, filters, create + chat |
-| `/tickets/:id` | Authenticated | Full-page thread + reply + attachments |
-| `/admin` | Admin | Stats overview |
-| `/admin/tickets` | Admin | All tickets + status updates |
-| `/admin/users` | Admin | User CRUD |
-
-### API consumption (SPA)
-
-| Module | Frontend entry | Backend endpoints |
-| --- | --- | --- |
-| **Auth** | `frontend/src/api/auth.ts` | `/register` · `/login` · `/user` · `/logout` |
-| **Tickets** | `frontend/src/api/tickets.ts` | `/tickets` · `/tickets/{id}` · `/replies` |
-| **Users** | `frontend/src/api/users.ts` | `/users` (admin) |
-| **Media** | `frontend/src/api/media.ts` | Resolves `/storage/...` for `<img>` |
-
-### Image uploads (client)
-
-- Prefer `FormData` + `images[]`; do **not** set `Content-Type` manually.
-- Max 5 images; same types/size rules as the API.
-- Relative `/storage` paths are rewritten using `VITE_BACKEND_URL`.
-
-### Auth flow (SPA)
-
-1. Guest submits login/register on `/auth`.
-2. API returns `{ token, user }` → stored and hydrated into `AuthContext`.
-3. On reload, `GET /api/user` validates the token; failure clears the session.
-4. Route guards send users to `/dashboard` or `/admin` by role.
-5. Every request sends `Authorization: Bearer <token>` and `Accept: application/json`.
+The full route definitions live in [routes/api.php](routes/api.php).
 
 ================================================================================
 
 ## Design Decisions
 
-### Backend
-- Thin controllers; validation in Form Requests; authorization in Policies.
-- Simple `role` enum instead of an external ACL package.
-- Polymorphic `attachments` with UUID filenames on the `public` disk.
-- Database notifications for the bell (tickets + registrations).
-- MySQL-only; Docker entrypoint migrates without forced re-seed.
-
-### Frontend
-- SPA (Vite + React Router) fitted to Sanctum token auth.
-- Context for session only; list/thread state stays local to pages.
-- Thin API modules with shared `ApiError` / Laravel 422 parsing.
-- Role-split shells matching API business rules.
-- Arabic RTL first (`lang="ar"` / `dir="rtl"`).
-- Dev proxy for `/api` and `/storage` to reduce CORS friction.
+- **Thin controllers:** Controllers stay focused on HTTP concerns; validation lives in Form Requests and authorization in Policies.
+- **Role column (no permission package):** A simple `role` enum (`user` | `admin`) on `users` keeps the take-home scope clear without an external ACL package.
+- **Ownership via TicketPolicy:** Viewing and replying use the same ownership/admin check; failed ticket access prefers `404` over `403` to avoid leaking ticket existence.
+- **Ticket status enum:** Status values are constrained to `open`, `in_progress`, and `closed`, with admins updating status via `PATCH /tickets/{id}`.
+- **Authentication:** Sanctum personal access tokens for the SPA/API client; consistent JSON via API Resources.
+- **Image attachments:** Tickets and replies accept optional image uploads via a polymorphic `attachments` table. Files are stored on the `public` disk with generated UUID filenames; original names are kept only as metadata.
+- **List ergonomics:** Ticket index is paginated (15 per page), filterable by `status`, ordered newest first, and eager-loads relations to avoid N+1 queries.
+- **Local DX:** MySQL is the only supported database. Docker Compose uses a production-style entrypoint (wait for DB → migrate → serve) with optional one-shot seeding via `APP_SEED=true`.
 
 ================================================================================
 
 ## Libraries & Technologies
 
-### Backend
+The main libraries and technologies used in the project, grouped by layer:
 
 ```text
 ┌────────────────────────────────────────────────────────────────────────────┐
@@ -412,78 +346,40 @@ frontend/src/
 ├──────────────────────┬───────────────┬─────────────────────────────────────┤
 │ Technology / Library │ Version       │ Purpose                             │
 ├──────────────────────┼───────────────┼─────────────────────────────────────┤
-│ PHP                  │ ^8.3          │ Runtime                             │
+│ PHP                  │ ^8.3          │ Core programming language           │
 ├──────────────────────┼───────────────┼─────────────────────────────────────┤
-│ Laravel Framework    │ ^13.8         │ Application framework               │
+│ Laravel Framework    │ ^13.8         │ Core framework                      │
 ├──────────────────────┼───────────────┼─────────────────────────────────────┤
-│ MySQL                │ 8+            │ Primary database                    │
+│ MySQL                │ 8+            │ Primary application database        │
 ├──────────────────────┼───────────────┼─────────────────────────────────────┤
-│ Laravel Sanctum      │ ^4.0          │ API token authentication            │
+│ Eloquent ORM         │ (in Laravel)  │ Database access and relationships   │
 ├──────────────────────┼───────────────┼─────────────────────────────────────┤
-│ PHPUnit              │ ^12.5         │ Feature / unit tests                │
+│ Laravel Sanctum      │ ^4.0          │ API authentication via tokens       │
 ├──────────────────────┼───────────────┼─────────────────────────────────────┤
-│ Docker Compose       │ —             │ App + MySQL local stack             │
+│ Laravel Tinker       │ ^3.0          │ REPL for testing and debugging code │
 └──────────────────────┴───────────────┴─────────────────────────────────────┘
 ```
-
-### Frontend
 
 ```text
 ┌────────────────────────────────────────────────────────────────────────────┐
-│                         Core Technologies (Frontend)                       │
+│                            Dev Tools                                       │
 ├──────────────────────┬───────────────┬─────────────────────────────────────┤
 │ Technology / Library │ Version       │ Purpose                             │
 ├──────────────────────┼───────────────┼─────────────────────────────────────┤
-│ React                │ ^19.2         │ UI library                          │
+│ PHPUnit              │ ^12.5         │ Testing framework (Feature & Unit)  │
 ├──────────────────────┼───────────────┼─────────────────────────────────────┤
-│ TypeScript           │ ~6.0          │ Static typing                       │
+│ Laravel Pint         │ ^1.27         │ Code style formatter                │
 ├──────────────────────┼───────────────┼─────────────────────────────────────┤
-│ Vite                 │ ^8.1          │ Dev server + production build       │
+│ Laravel Pail         │ ^1.2          │ Tailing logs during development     │
 ├──────────────────────┼───────────────┼─────────────────────────────────────┤
-│ React Router DOM     │ ^7.18         │ Client routing & guards             │
+│ Laravel Boost        │ ^2.4          │ Helper tooling for Laravel dev      │
 ├──────────────────────┼───────────────┼─────────────────────────────────────┤
-│ Tailwind CSS         │ ^4.3          │ Styling                             │
+│ FakerPHP             │ ^1.23         │ Fake data for factories and tests   │
 ├──────────────────────┼───────────────┼─────────────────────────────────────┤
-│ Motion               │ ^12.42        │ UI motion                           │
+│ Mockery              │ ^1.6          │ Mocking objects in tests            │
+├──────────────────────┼───────────────┼─────────────────────────────────────┤
+│ Nuno Collision       │ ^8.6          │ Clear error reporting in terminal   │
+├──────────────────────┼───────────────┼─────────────────────────────────────┤
+│ Docker Compose       │ —             │ App + MySQL local stack with entrypoint │
 └──────────────────────┴───────────────┴─────────────────────────────────────┘
 ```
-
-### Useful commands
-
-| Area | Command | Description |
-| --- | --- | --- |
-| API | `php artisan serve` | Backend on `:8000` |
-| API | `php artisan test --compact` | Run PHPUnit |
-| API | `APP_SEED=true docker compose up --build -d` | Docker first boot |
-| SPA | `cd frontend && npm run dev` | Vite on `:5173` |
-| SPA | `cd frontend && npm run build` | Production bundle |
-| SPA | `cd frontend && npm run lint` | ESLint |
-
-================================================================================
-
-## Smoke test (after setup)
-
-1. Open `http://localhost:5173` with the API running on `:8000`.
-2. Login as `ali@gmail.com` / `password` → create a ticket with an image → reply.
-3. Login as `admin@example.com` / `password` → open the ticket → change status → check users page.
-4. Confirm the notifications bell shows recent activity.
-
-================================================================================
-
-## Submission
-
-Push this **monorepo** to a **public** GitHub repository. Do **not** include any company name in the repository name, README, or source.
-
-Suggested remote name: `mini-helpdesk` (or similar).
-
-```bash
-git init
-git add .
-git status   # confirm: no .env, node_modules, vendor
-git commit -m "Submit Mini Helpdesk full-stack app"
-git branch -M main
-git remote add origin https://github.com/<your-username>/mini-helpdesk.git
-git push -u origin main
-```
-
-Ensure [`frontend/`](frontend/) is included in the same repository so reviewers can clone once and run both layers from this README.
